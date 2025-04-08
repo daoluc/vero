@@ -15,13 +15,14 @@ export function ChatInterface() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll to bottom when messages change
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
     useEffect(() => {
-        if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-        }
+        scrollToBottom();
     }, [messages]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -66,12 +67,12 @@ export function ChatInterface() {
     return (
         <div className="flex flex-col h-[calc(100vh-12rem)] max-w-4xl mx-auto p-4">
             <div className="flex-1 p-4 mb-4">
-                <ScrollArea className="h-[calc(100vh-12rem)]" ref={scrollAreaRef}>
+                <ScrollArea className="h-[calc(100vh-12rem)]">
                     <div className="space-y-4">
                         {messages.map((message, index) => (
                             <div
                                 key={index}
-                                className={`flex items-start gap-4 ${message.role === "assistant" ? "flex-row" : "flex-row-reverse"
+                                className={`flex items-start gap-4 ${message.role != "user" ? "flex-row" : "flex-row-reverse"
                                     }`}
                             >
                                 <div
@@ -86,6 +87,7 @@ export function ChatInterface() {
                                 </div>
                             </div>
                         ))}
+                        <div ref={messagesEndRef} />
                     </div>
                 </ScrollArea>
             </div>
