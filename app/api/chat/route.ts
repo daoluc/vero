@@ -7,11 +7,11 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
 	try {
-		const { message } = await req.json();
+		const { messages } = await req.json();
 
 		const completion = await openai.chat.completions.create({
 			model: "gpt-4o-mini",
-			messages: [{ role: "user", content: message }],
+			messages: messages,
 		});
 
 		return NextResponse.json({

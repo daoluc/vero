@@ -39,10 +39,26 @@ export function ChatInterface() {
         setMessages((prev) => [...prev, thinkingMessage]);
 
         try {
+            // Format messages for the API, excluding the thinking message
+            const messagesForApi = messages
+                .filter(msg => msg.role !== "thinking")
+                .map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                }));
+
+            // Add the current user message
+            messagesForApi.push({
+                role: "user",
+                content: input
+            });
+
+            console.log('I am here 5515', messagesForApi);
+
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: input }),
+                body: JSON.stringify({ messages: messagesForApi }),
             });
 
             const data = await response.json();
