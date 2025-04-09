@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
-
-interface Message {
-    role: "user" | "assistant" | "thinking";
-    content: string;
-}
+import { useChat } from '@ai-sdk/react';
+import ReactMarkdown from 'react-markdown';
 
 export function ChatInterface() {
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [input, setInput] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+    const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+        api: "/api/chat",
+        maxSteps: 5,
+    });
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -25,59 +23,9 @@ export function ChatInterface() {
         scrollToBottom();
     }, [messages]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || isLoading) return;
-
-        const userMessage: Message = { role: "user", content: input };
-        setMessages((prev) => [...prev, userMessage]);
-        setInput("");
-        setIsLoading(true);
-
-        // Add thinking message
-        const thinkingMessage: Message = { role: "thinking", content: "Thinking..." };
-        setMessages((prev) => [...prev, thinkingMessage]);
-
-        try {
-            // Format messages for the API, excluding the thinking message
-            const messagesForApi = messages
-                .filter(msg => msg.role !== "thinking")
-                .map(msg => ({
-                    role: msg.role,
-                    content: msg.content
-                }));
-
-            // Add the current user message
-            messagesForApi.push({
-                role: "user",
-                content: input
-            });
-
-            console.log('I am here 5515', messagesForApi);
-
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: messagesForApi }),
-            });
-
-            const data = await response.json();
-
-            // Remove thinking message and add assistant message
-            setMessages((prev) => {
-                const filteredMessages = prev.filter(msg => msg.role !== "thinking");
-                return [...filteredMessages, { role: "assistant", content: data.message }];
-            });
-        } catch (error) {
-            console.error("Error:", error);
-            // Remove thinking message and add error message
-            setMessages((prev) => {
-                const filteredMessages = prev.filter(msg => msg.role !== "thinking");
-                return [...filteredMessages, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }];
-            });
-        } finally {
-            setIsLoading(false);
-        }
+        handleSubmit(e);
     };
 
     return (
@@ -88,18 +36,35 @@ export function ChatInterface() {
                         {messages.map((message, index) => (
                             <div
                                 key={index}
-                                className={`flex items-start gap-4 ${message.role != "user" ? "flex-row" : "flex-row-reverse"
+                                className={`flex items-start gap-4 ${message.role !== "user" ? "flex-row" : "flex-row-reverse"
                                     }`}
                             >
                                 <div
                                     className={`rounded-lg p-4 ${message.role === "assistant"
                                         ? "bg-muted"
-                                        : message.role === "thinking"
+                                        : message.role === "system"
                                             ? "bg-muted/50 italic"
                                             : "bg-primary text-primary-foreground"
                                         }`}
                                 >
-                                    {message.content}
+                                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                                        <ReactMarkdown
+                                            components={{
+                                                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                                                h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
+                                                h2: ({ children }) => <h2 className="text-lg font-bold mb-2">{children}</h2>,
+                                                h3: ({ children }) => <h3 className="text-base font-bold mb-2">{children}</h3>,
+                                                ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                                                ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                                                li: ({ children }) => <li className="mb-1">{children}</li>,
+                                                code: ({ children }) => <code className="bg-muted-foreground/10 px-1 py-0.5 rounded text-sm">{children}</code>,
+                                                pre: ({ children }) => <pre className="bg-muted-foreground/10 p-2 rounded mb-2 overflow-x-auto">{children}</pre>,
+                                                blockquote: ({ children }) => <blockquote className="border-l-2 border-muted-foreground/20 pl-4 italic mb-2">{children}</blockquote>,
+                                            }}
+                                        >
+                                            {message.content}
+                                        </ReactMarkdown>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -107,10 +72,10 @@ export function ChatInterface() {
                     </div>
                 </ScrollArea>
             </div>
-            <form onSubmit={handleSubmit} className="flex gap-2">
+            <form onSubmit={onSubmit} className="flex gap-2">
                 <Input
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={handleInputChange}
                     placeholder="Type your message..."
                     disabled={isLoading}
                     className="flex-1"

@@ -1,27 +1,56 @@
-import { OpenAI } from "openai";
-import { NextResponse } from "next/server";
+import { openai } from "@ai-sdk/openai";
+import { streamText, tool } from "ai";
+import { z } from "zod";
 
-const openai = new OpenAI({
-	apiKey: process.env.OPENAI_API_KEY,
-});
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
-	try {
-		const { messages } = await req.json();
+	const { messages } = await req.json();
 
-		const completion = await openai.chat.completions.create({
-			model: "gpt-4o-mini",
-			messages: messages,
-		});
+	const result = streamText({
+		model: openai("gpt-4o"),
+		messages,
+		tools: {
+			internal_search: tool({
+				description:
+					"Search internal knowledge base for relevant information",
+				parameters: z.object({
+					query: z
+						.string()
+						.describe("The search query to find relevant information"),
+				}),
+				execute: async ({ query }) => {
+					try {
+						const response = await fetch(
+							"http://localhost:8000/internal_search",
+							{
+								method: "POST",
+								headers: {
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify({ query }),
+							}
+						);
 
-		return NextResponse.json({
-			message: completion.choices[0].message.content,
-		});
-	} catch (error) {
-		console.error("Error:", error);
-		return NextResponse.json(
-			{ error: "Failed to process your request" },
-			{ status: 500 }
-		);
-	}
+						if (!response.ok) {
+							throw new Error("Internal search failed");
+						}
+
+						const results = await response.json();
+						console.log(
+							"Internal search results:",
+							JSON.stringify(results, null, 2)
+						);
+						return JSON.stringify(results, null, 2);
+					} catch (error) {
+						console.error("Internal search error:", error);
+						return "Internal search failed. Please try again.";
+					}
+				},
+			}),
+		},
+	});
+
+	return result.toDataStreamResponse();
 }
