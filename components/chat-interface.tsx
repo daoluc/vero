@@ -87,7 +87,7 @@ export function ChatInterface() {
                     </div>
                 </ScrollArea>
             </div>
-            <form onSubmit={onSubmit} className="flex gap-2 p-4 border-t bg-background sticky bottom-0">
+            <form onSubmit={onSubmit} className="flex gap-2 p-4 border-t bg-background">
                 <Input
                     value={input}
                     onChange={handleInputChange}
