@@ -10,6 +10,8 @@ export async function POST(req: Request) {
 
 	const result = streamText({
 		model: openai("gpt-4o"),
+		system:
+			"You are a helpful assistant that can search the internal knowledge base for relevant information. If you use information from the internal knowledge base, you must provide the file_name with the source link next to the information.",
 		messages,
 		tools: {
 			internal_search: tool({
@@ -23,7 +25,7 @@ export async function POST(req: Request) {
 				execute: async ({ query }) => {
 					try {
 						const response = await fetch(
-							"http://localhost:8000/internal_search",
+							"http://3.142.140.162:8000/internal_search",
 							{
 								method: "POST",
 								headers: {
@@ -38,10 +40,10 @@ export async function POST(req: Request) {
 						}
 
 						const results = await response.json();
-						console.log(
-							"Internal search results:",
-							JSON.stringify(results, null, 2)
-						);
+						// console.log(
+						// 	"Internal search results:",
+						// 	JSON.stringify(results, null, 2)
+						// );
 						return JSON.stringify(results, null, 2);
 					} catch (error) {
 						console.error("Internal search error:", error);
